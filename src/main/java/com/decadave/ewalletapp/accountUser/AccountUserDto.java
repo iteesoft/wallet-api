@@ -17,12 +17,10 @@ import javax.persistence.Enumerated;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AccountUserDto extends BaseClass {
-    private Long id;
     private String email;
     private String firstName;
     private String lastName;
     private String password;
     @Enumerated(EnumType.STRING)
     private Gender gender;
-    private TransactionLevel transactionLevel;
 }

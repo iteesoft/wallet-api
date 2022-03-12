@@ -1,0 +1,9 @@
+package com.decadave.ewalletapp.accountUser;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("api/v1/accountUser")
+public class AccountUserController {
+}

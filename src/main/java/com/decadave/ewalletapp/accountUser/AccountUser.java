@@ -17,7 +17,7 @@ import java.util.Collection;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "user_table")
+@Table(name = "account_user_table")
 public class AccountUser extends BaseClass {
     private String email;
     private String firstName;
@@ -28,5 +28,4 @@ public class AccountUser extends BaseClass {
     private TransactionLevel transactionLevel;
     @ManyToMany(fetch = FetchType.EAGER)
     private Collection<Role> roles = new ArrayList<>();
-
 }
