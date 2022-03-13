@@ -5,10 +5,10 @@ server:
 spring:
   datasource:
     url: "jdbc:postgresql://localhost:5432/e-wallet"
-    password: "postgres"
-    username:
+    password:
+    username: "postgres"
     driver-class-name: "org.postgresql.Driver"
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create
     show-sql: true

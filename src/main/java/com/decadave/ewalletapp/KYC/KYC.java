@@ -19,5 +19,5 @@ public class KYC extends BaseClass {
     private String bVN;
     private String driverLicence;
     private String passportUrl;
-    private Long walletId;
+    private Long accountHolderId;
 }

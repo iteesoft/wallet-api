@@ -14,6 +14,7 @@ import javax.persistence.Table;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Table(name = "accounts_table")
 public class Account extends BaseClass {
     private String accountName;

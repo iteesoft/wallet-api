@@ -2,7 +2,6 @@ package com.decadave.ewalletapp.accountUser;
 
 import com.decadave.ewalletapp.shared.BaseClass;
 import com.decadave.ewalletapp.shared.enums.Gender;
-import com.decadave.ewalletapp.shared.enums.TransactionLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,7 +15,8 @@ import javax.persistence.Enumerated;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class AccountUserDto extends BaseClass {
+public class AccountUserDto extends BaseClass
+{
     private String email;
     private String firstName;
     private String lastName;

@@ -18,13 +18,15 @@ import java.util.Collection;
 @NoArgsConstructor
 @Builder
 @Table(name = "account_user_table")
-public class AccountUser extends BaseClass {
+public class AccountUser extends BaseClass
+{
     private String email;
     private String firstName;
     private String lastName;
     private String password;
     @Enumerated(EnumType.STRING)
     private Gender gender;
+    @Enumerated(EnumType.STRING)
     private TransactionLevel transactionLevel;
     @ManyToMany(fetch = FetchType.EAGER)
     private Collection<Role> roles = new ArrayList<>();

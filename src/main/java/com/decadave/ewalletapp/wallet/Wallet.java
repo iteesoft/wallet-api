@@ -15,11 +15,12 @@ import java.math.BigDecimal;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Table(name = "wallet_table")
 public class Wallet extends BaseClass {
     private Long accountId;
     private String walletAccountNumber;
-    private BigDecimal walletBalance;
-    @OneToOne
-    private KYC kycId;
+    private Double walletBalance;
+    private String transactionPin;
+    private Long kycId;
 }
