@@ -1,7 +1,9 @@
 package com.decadave.ewalletapp.accountUser;
 
 import com.decadave.ewalletapp.role.RoleDto;
+import com.decadave.ewalletapp.shared.dto.TopUpDto;
 import com.decadave.ewalletapp.shared.responses.HttpResponse;
+import com.decadave.ewalletapp.transaction.TransactionDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,13 +38,20 @@ public class AccountUserController
     @PostMapping("/save")
     public ResponseEntity<HttpResponse> saveUsers (@RequestBody AccountUserDto accountUserDto)
     {
-        return response(HttpStatus.OK, userService.saveAccountUser(accountUserDto));
+        return response(HttpStatus.OK, userService.createAccountUser(accountUserDto));
     }
 
     @PostMapping("/role/save")
     public ResponseEntity<HttpResponse> saveRole (@RequestBody RoleDto roleDto)
     {
         return response(HttpStatus.OK, userService.saveRole(roleDto));
+    }
+
+
+    @PutMapping("/topUp")
+    public ResponseEntity<TransactionDto> topUpAccount (@RequestBody TopUpDto topUpDto)
+    {
+        return new ResponseEntity<>(userService.topUpWallet(topUpDto), HttpStatus.OK);
     }
 
     public static ResponseEntity<HttpResponse> response(HttpStatus httpStatus, String message)

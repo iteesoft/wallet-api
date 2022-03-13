@@ -7,21 +7,24 @@ import com.decadave.ewalletapp.account.AccountRepository;
 import com.decadave.ewalletapp.role.Role;
 import com.decadave.ewalletapp.role.RoleDto;
 import com.decadave.ewalletapp.role.RoleRepository;
+import com.decadave.ewalletapp.shared.dto.TopUpDto;
 import com.decadave.ewalletapp.shared.enums.TransactionLevel;
-import com.decadave.ewalletapp.shared.exceptions.RoleNotFoundException;
-import com.decadave.ewalletapp.shared.exceptions.UserWithEmailAlreadyExist;
-import com.decadave.ewalletapp.shared.exceptions.UserWithEmailNotFound;
+import com.decadave.ewalletapp.shared.enums.TransactionStatus;
+import com.decadave.ewalletapp.shared.enums.TransactionType;
+import com.decadave.ewalletapp.shared.exceptions.*;
+import com.decadave.ewalletapp.transaction.Transaction;
+import com.decadave.ewalletapp.transaction.TransactionDto;
+import com.decadave.ewalletapp.transaction.TransactionRepository;
 import com.decadave.ewalletapp.wallet.Wallet;
-import com.decadave.ewalletapp.wallet.WalletRepositiry;
+import com.decadave.ewalletapp.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +35,10 @@ public class UserServiceImpl implements UserService
 
     private final AccountUserRepository userRepository;
     private final AccountRepository accountRepository;
-    private final WalletRepositiry walletRepositiry;
+    private final WalletRepository walletRepository;
     private final RoleRepository roleRepository;
     private final KycRepository kycRepository;
+    private final TransactionRepository transactionRepository;
     private  final ModelMapper mapper;
 
 //    @Autowired
@@ -45,7 +49,7 @@ public class UserServiceImpl implements UserService
 //    }
 
     @Override
-    public String saveAccountUser(AccountUserDto userDto)
+    public String createAccountUser(AccountUserDto userDto)
     {
         log.info("Saving new account user, {}", userDto.getEmail());
         Optional<AccountUser> user = userRepository.findByEmail(userDto.getEmail());
@@ -73,6 +77,7 @@ public class UserServiceImpl implements UserService
         Wallet userWallet = Wallet.builder()
                 .walletBalance(0.00)
                 .walletAccountNumber(generateRandomAccountNumber())
+                .accountHolderId(userAccountCreation.getAccountHolderId())
                 .transactionPin("0000")
                 .kycId(userKyc.getId())
                 .build();
@@ -80,7 +85,7 @@ public class UserServiceImpl implements UserService
         userAccountCreation.setWallet(userWallet);
         userWallet.setAccountId(userAccountCreation.getId());
 
-        walletRepositiry.save(userWallet);
+        walletRepository.save(userWallet);
     }
 
     private KYC createAKycDirectoryForUser(Account userAccountCreation) {
@@ -153,6 +158,63 @@ public class UserServiceImpl implements UserService
         log.info("Getting all registered account users");
         return userRepository.findAll();
     }
+
+    @Override
+    public TransactionDto topUpWallet(TopUpDto topUpDto) {
+        log.info("Topping up my wallet account");
+        Wallet walletToTopUp = walletRepository.findByAccountHolderId(topUpDto.getAccountHolderId());
+        TransactionDto transactionDone = new TransactionDto();
+        if(walletToTopUp!= null )
+        {
+            if(topUpDto.getAmount()>=50)
+            {
+                if (Objects.equals(topUpDto.getTransactionPin(), walletToTopUp.getTransactionPin()))
+                {
+                    Double amountToppedUp = walletToTopUp.getWalletBalance()+topUpDto.getAmount();
+                    walletToTopUp.setWalletBalance(amountToppedUp);
+                    walletRepository.save(walletToTopUp);
+
+                    String date = setDateAndTimeForTransaction();
+
+                    Transaction userTransaction = generateTransactionSummary(topUpDto, walletToTopUp, date);
+
+                    transactionDone = mapper.map(userTransaction, TransactionDto.class);
+                } else
+                {
+                    throw new WrongTransactionPin("You have entered a wrong transaction password!");
+                }
+                } else
+                {
+                    throw new AmountTooSmallException("Amount to topUp cannot be less than N50");
+                }
+        } else
+        {
+            throw new UsersWalletWithUserIdNotFound("Users wallet not found");
+        }
+        return transactionDone;
+    }
+
+    private Transaction generateTransactionSummary(TopUpDto topUpDto, Wallet walletToTopUp, String date) {
+        Transaction userTransaction = Transaction.builder()
+                .transactionAmount(topUpDto.getAmount())
+                .transactionStatus(TransactionStatus.SUCCESSFUL)
+                .transactionType(TransactionType.DEPOSIT)
+                .userId(topUpDto.getAccountHolderId())
+                .walletId(walletToTopUp.getId())
+                .dateAndTimeForTransaction(date)
+                .Summary(topUpDto.getTransactionSummary())
+                .build();
+        transactionRepository.save(userTransaction);
+        return userTransaction;
+    }
+
+    private String setDateAndTimeForTransaction() {
+        String pattern = "dd MMMMM yyyy HH:mm:ss.zzz";
+        SimpleDateFormat simpleDateFormat =new SimpleDateFormat(pattern, new Locale("fr", "FR"));
+        String date = simpleDateFormat.format(new Date());
+        return date;
+    }
+
     private String generateRandomAccountNumber () {
         StringBuilder accNum = new StringBuilder();
         Random rand = new Random();

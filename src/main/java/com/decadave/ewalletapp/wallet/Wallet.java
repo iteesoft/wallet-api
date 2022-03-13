@@ -22,5 +22,6 @@ public class Wallet extends BaseClass {
     private String walletAccountNumber;
     private Double walletBalance;
     private String transactionPin;
+    private Long accountHolderId;
     private Long kycId;
 }
