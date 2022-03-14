@@ -3,9 +3,11 @@ package com.decadave.ewalletapp.accountUser;
 import com.decadave.ewalletapp.role.RoleDto;
 import com.decadave.ewalletapp.shared.dto.ChangeTransactionPinDto;
 import com.decadave.ewalletapp.shared.dto.TopUpDto;
-import com.decadave.ewalletapp.shared.dto.WithdrawalOrTransferDto;
+import com.decadave.ewalletapp.shared.dto.TransferDto;
+import com.decadave.ewalletapp.shared.dto.WithdrawalDto;
 import com.decadave.ewalletapp.shared.responses.HttpResponse;
 import com.decadave.ewalletapp.transaction.Transaction;
+import com.decadave.ewalletapp.transaction.TransactionDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,10 +53,17 @@ public class AccountUserController
     }
 
     @PutMapping("/withdrawal-from-wallet")
-    public ResponseEntity<Transaction> withdrawal (@RequestBody WithdrawalOrTransferDto withdrawalOrTransferDto)
+    public ResponseEntity<Transaction> withdrawal (@RequestBody WithdrawalDto withdrawalDto)
     {
-        return new ResponseEntity<>(userService.withdrawal(withdrawalOrTransferDto), HttpStatus.OK);
+        return new ResponseEntity<>(userService.withdrawal(withdrawalDto), HttpStatus.OK);
     }
+
+    @PutMapping("/transfer-from-wallet")
+    public ResponseEntity<TransactionDto> transfer (@RequestBody TransferDto transferDto)
+    {
+        return new ResponseEntity<>(userService.transferMoney(transferDto), HttpStatus.OK);
+    }
+
 
     @PutMapping("/change-transaction-pin")
     public  ResponseEntity<HttpResponse> changeTransactionPin (@RequestBody ChangeTransactionPinDto changeTransactionPinDto)

@@ -2,10 +2,12 @@ package com.decadave.ewalletapp.accountUser;
 
 
 import com.decadave.ewalletapp.role.RoleDto;
+import com.decadave.ewalletapp.shared.dto.TransferDto;
 import com.decadave.ewalletapp.shared.dto.TopUpDto;
 import com.decadave.ewalletapp.shared.dto.ChangeTransactionPinDto;
-import com.decadave.ewalletapp.shared.dto.WithdrawalOrTransferDto;
+import com.decadave.ewalletapp.shared.dto.WithdrawalDto;
 import com.decadave.ewalletapp.transaction.Transaction;
+import com.decadave.ewalletapp.transaction.TransactionDto;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +21,7 @@ public interface UserService
     AccountUserDto getUser(String userId);
     List<AccountUser> AccountUsers();
     TopUpDto topUpWalletBalance(TopUpDto topUpDto);
-    Transaction withdrawal(WithdrawalOrTransferDto withdrawalOrTransferDto);
+    Transaction withdrawal(WithdrawalDto withdrawalDto);
+    TransactionDto transferMoney (TransferDto transferDto);
     String changeTransactionPin (ChangeTransactionPinDto changeTransactionPinDto);
 }

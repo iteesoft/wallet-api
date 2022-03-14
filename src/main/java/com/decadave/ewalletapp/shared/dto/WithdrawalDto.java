@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class WithdrawalOrTransferDto
+public class WithdrawalDto
 {
     private Long accountHolderId;
     private Double amount;

@@ -7,14 +7,16 @@ import com.decadave.ewalletapp.account.AccountRepository;
 import com.decadave.ewalletapp.role.Role;
 import com.decadave.ewalletapp.role.RoleDto;
 import com.decadave.ewalletapp.role.RoleRepository;
+import com.decadave.ewalletapp.shared.dto.TransferDto;
 import com.decadave.ewalletapp.shared.dto.ChangeTransactionPinDto;
 import com.decadave.ewalletapp.shared.dto.TopUpDto;
-import com.decadave.ewalletapp.shared.dto.WithdrawalOrTransferDto;
+import com.decadave.ewalletapp.shared.dto.WithdrawalDto;
 import com.decadave.ewalletapp.shared.enums.TransactionLevel;
 import com.decadave.ewalletapp.shared.enums.TransactionStatus;
 import com.decadave.ewalletapp.shared.enums.TransactionType;
 import com.decadave.ewalletapp.shared.exceptions.*;
 import com.decadave.ewalletapp.transaction.Transaction;
+import com.decadave.ewalletapp.transaction.TransactionDto;
 import com.decadave.ewalletapp.transaction.TransactionRepository;
 import com.decadave.ewalletapp.wallet.Wallet;
 import com.decadave.ewalletapp.wallet.WalletRepository;
@@ -24,6 +26,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.transaction.Transactional;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -213,27 +217,23 @@ public class UserServiceImpl implements UserService
 
 
     @Override
-    public Transaction withdrawal(WithdrawalOrTransferDto withdrawalOrTransferDto) {
+    public Transaction withdrawal(WithdrawalDto withdrawalDto) {
         log.info("Withdrawing of currency");
         Optional<Wallet> sendersWallet = Optional.ofNullable(walletRepository
-                .findByAccountHolderId(withdrawalOrTransferDto.getAccountHolderId())
+                .findByAccountHolderId(withdrawalDto.getAccountHolderId())
                 .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
-
-//        Wallet receiverWallet = walletRepository.findByAccountHolderEmailOrWalletAccountNumber(withdrawalOrTransferDto.getReceiversEmailOrAccountNumber(), withdrawalOrTransferDto.getReceiversEmailOrAccountNumber());
-//                .orElseThrow(() -> new UserWithEmailNotFound("Receivers Wallet was not found")));
-
         Optional<AccountUser> user = Optional.ofNullable(userRepository.findById(sendersWallet.get().getAccountHolderId())
                 .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
 
         Transaction transactionToBeDone = new Transaction();
         Transaction transactionSummary = new Transaction();
-        Double amountToWithdraw = withdrawalOrTransferDto.getAmount();
+        Double amountToWithdraw = withdrawalDto.getAmount();
         Double amountHaving = sendersWallet.get().getWalletBalance();
-        if(Objects.equals(withdrawalOrTransferDto.getTransactionPin(), "0000"))
+        if(Objects.equals(withdrawalDto.getTransactionPin(), "0000"))
         {
             throw new AmountTooSmallOrBiggerException("For your security, you need to change your transaction pin before any transaction.");
         }
-        if(sendersWallet.get().getTransactionPin().equals(withdrawalOrTransferDto.getTransactionPin()))
+        if(sendersWallet.get().getTransactionPin().equals(withdrawalDto.getTransactionPin()))
         {
         if(amountHaving < 999 || amountToWithdraw > amountHaving)
         {
@@ -242,27 +242,27 @@ public class UserServiceImpl implements UserService
             TransactionLevel userLevel = user.get().getTransactionLevel();
             if (userLevel.equals(TransactionLevel.LEVEL_ONE_ALL))
             {
-                if(withdrawalOrTransferDto.getAmount()>=1000 && withdrawalOrTransferDto.getAmount()<=20000)
+                if(withdrawalDto.getAmount()>=1000 && withdrawalDto.getAmount()<=20000)
                 {
-                    transactionToBeDone = getWithdrawalOrTransferSummary(sendersWallet, transactionSummary, withdrawalOrTransferDto);
+                    transactionToBeDone = getWithdrawalSummary(sendersWallet, transactionSummary, withdrawalDto);
                 } else
                 {
                     throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 20000");
                 }
             } else if (userLevel.equals(TransactionLevel.LEVEL_TWO_SILVER))
             {
-                if(withdrawalOrTransferDto.getAmount()>=1000 && withdrawalOrTransferDto.getAmount()<=700000)
+                if(withdrawalDto.getAmount()>=1000 && withdrawalDto.getAmount()<=700000)
                 {
-                    transactionToBeDone = getWithdrawalOrTransferSummary(sendersWallet, transactionSummary, withdrawalOrTransferDto);
+                    transactionToBeDone = getWithdrawalSummary(sendersWallet, transactionSummary, withdrawalDto);
                 } else
                 {
                     throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 700000 ");
                 }
             } else if (userLevel.equals(TransactionLevel.LEVEL_THREE_GOLD))
             {
-                if(withdrawalOrTransferDto.getAmount()>=50 && withdrawalOrTransferDto.getAmount()<=20000000)
+                if(withdrawalDto.getAmount()>=50 && withdrawalDto.getAmount()<=20000000)
                 {
-                    transactionToBeDone = getWithdrawalOrTransferSummary(sendersWallet, transactionSummary, withdrawalOrTransferDto);
+                    transactionToBeDone = getWithdrawalSummary(sendersWallet, transactionSummary, withdrawalDto);
                 }
             } else {
                 throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 20000000");
@@ -277,7 +277,113 @@ public class UserServiceImpl implements UserService
         return transactionToBeDone;
     }
 
-    private Transaction getWithdrawalOrTransferSummary (Optional<Wallet> sendersWallet, Transaction transaction, WithdrawalOrTransferDto transactionDone) {
+    @Override
+    public TransactionDto transferMoney(TransferDto transferDto) {
+        log.info("Transfer of currency");
+        Optional<Wallet> sendersWallet = Optional.ofNullable(walletRepository
+                .findByAccountHolderId(transferDto.getAccountHolderId())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+
+        Optional<AccountUser> sender = Optional.ofNullable(userRepository.findById(sendersWallet.get().getAccountHolderId())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+
+
+        Optional<Wallet> receiversWallet = Optional.ofNullable(walletRepository
+                .findByAccountHolderEmailOrWalletAccountNumber(transferDto.getReceiversEmail(), transferDto.getReceiversAccountNumber())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+
+        Double amountToTransfer = transferDto.getAmount();
+        TransactionDto transactionDto = new TransactionDto();
+        Double amountHaving = sendersWallet.get().getWalletBalance();
+        if(Objects.equals(transferDto.getTransactionPin(), "0000"))
+        {
+            throw new AmountTooSmallOrBiggerException("For your security, you need to change your transaction pin before any transaction.");
+        }
+        if(sendersWallet.get().getTransactionPin().equals(transferDto.getTransactionPin()))
+        {
+            if(amountHaving < 999 || amountToTransfer > amountHaving)
+            {
+                throw new InsufficientFundsException("Amount initiated is below your wallet balance");
+            }
+            TransactionLevel userLevel = sender.get().getTransactionLevel();
+            if (userLevel.equals(TransactionLevel.LEVEL_ONE_ALL))
+            {
+                if(transferDto.getAmount()>=1000 && transferDto.getAmount()<=20000)
+                {
+                    transferMethod(transferDto, sendersWallet, receiversWallet);
+
+                    transactionDto = getTransactionDto(transferDto, transactionDto, sendersWallet);
+                } else
+                {
+                    throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 20000");
+                }
+            } else if (userLevel.equals(TransactionLevel.LEVEL_TWO_SILVER))
+            {
+                if(transferDto.getAmount()>=1000 && transferDto.getAmount()<=700000)
+                {
+                    transferMethod(transferDto, sendersWallet, receiversWallet);
+
+                    transactionDto = getTransactionDto(transferDto, transactionDto, sendersWallet);
+                } else
+                {
+                    throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 700000 ");
+                }
+            } else if (userLevel.equals(TransactionLevel.LEVEL_THREE_GOLD))
+            {
+                if(transferDto.getAmount()>=50 && transferDto.getAmount()<=20000000)
+                {
+                    transferMethod(transferDto, sendersWallet, receiversWallet);
+
+                    transactionDto = getTransactionDto(transferDto, transactionDto, sendersWallet);
+                }
+            } else {
+                throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 20000000");
+            }
+        } else
+        {
+            throw new WrongTransactionPin("You have entered a wrong transaction pin! ");
+
+        }
+
+
+        return transactionDto;
+    }
+
+    private TransactionDto getTransactionDto(TransferDto transferDto, TransactionDto transactionDto, Optional<Wallet> sendersWallet) {
+        String date = setDateAndTimeForTransaction();
+        StringBuilder receiverId = new StringBuilder();
+        if(transferDto.getReceiversAccountNumber()!=null)
+        {
+            receiverId.append(transferDto.getReceiversAccountNumber());
+        } else
+        {
+            receiverId.append(transferDto.getReceiversEmail());
+        }
+        transactionDto = TransactionDto.builder()
+                .senderOrTransfer(sendersWallet.get().getAccountHolderEmail())
+                .receiver(receiverId.toString())
+                .transactionType(TransactionType.TRANSFER)
+                .transactionStatus(TransactionStatus.SUCCESSFUL)
+                .dateAndTimeForTransaction(date)
+                .summary(transferDto.getTransactionSummary())
+                .build();
+        return transactionDto;
+    }
+
+    private void transferMethod(TransferDto transferDto, Optional<Wallet> sendersWallet, Optional<Wallet> receiversWallet) {
+        Double amountToTransferTo = transferDto.getAmount();
+        Double senderBalance = sendersWallet.get().getWalletBalance();
+        Double receiversBalance = receiversWallet.get().getWalletBalance();
+        Double newSenderBalance = senderBalance-amountToTransferTo;
+        Double newReceiversBalance = receiversBalance+amountToTransferTo;
+
+        sendersWallet.get().setWalletBalance(newSenderBalance);
+        walletRepository.save(sendersWallet.get());
+        receiversWallet.get().setWalletBalance(newReceiversBalance);
+        walletRepository.save(sendersWallet.get());
+    }
+
+    private Transaction getWithdrawalSummary(Optional<Wallet> sendersWallet, Transaction transaction, WithdrawalDto transactionDone) {
         deductionMethod(sendersWallet, transactionDone.getAmount());
         String date = setDateAndTimeForTransaction();
 
@@ -292,7 +398,7 @@ public class UserServiceImpl implements UserService
                 .build();
         transactionRepository.save(userWithdrawalTransaction);
 
-        transactionDone = mapper.map(userWithdrawalTransaction, WithdrawalOrTransferDto.class);
+        transactionDone = mapper.map(userWithdrawalTransaction, WithdrawalDto.class);
         return userWithdrawalTransaction;
     }
 
