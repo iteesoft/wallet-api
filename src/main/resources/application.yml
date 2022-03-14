@@ -10,5 +10,9 @@ spring:
     driver-class-name: "org.postgresql.Driver"
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: create-drop
     show-sql: true
+
+#
+#    http://localhost:8082/api/v1/swagger-ui/index:
+#      html?configUrl=/api/v1/v3/api-docs/swagger-config#/:

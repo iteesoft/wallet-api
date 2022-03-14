@@ -1,9 +1,11 @@
 package com.decadave.ewalletapp.accountUser;
 
 import com.decadave.ewalletapp.role.RoleDto;
+import com.decadave.ewalletapp.shared.dto.ChangeTransactionPinDto;
 import com.decadave.ewalletapp.shared.dto.TopUpDto;
+import com.decadave.ewalletapp.shared.dto.WithdrawalOrTransferDto;
 import com.decadave.ewalletapp.shared.responses.HttpResponse;
-import com.decadave.ewalletapp.transaction.TransactionDto;
+import com.decadave.ewalletapp.transaction.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +18,7 @@ import java.util.List;
 public class AccountUserController
 {
     @Autowired
-    private  UserService userService;
+    private  final UserService userService;
 
     public AccountUserController(UserService userService)
     {
@@ -29,13 +31,7 @@ public class AccountUserController
         return new ResponseEntity<>(userService.AccountUsers(), HttpStatus.OK);
     }
 
-//    @GetMapping("/test")
-//    public ResponseEntity<HttpResponse> test ()
-//    {
-//        return response(HttpStatus.OK,"Yes working");
-//    }
-
-    @PostMapping("/save")
+    @PostMapping("/create-account")
     public ResponseEntity<HttpResponse> saveUsers (@RequestBody AccountUserDto accountUserDto)
     {
         return response(HttpStatus.OK, userService.createAccountUser(accountUserDto));
@@ -48,10 +44,22 @@ public class AccountUserController
     }
 
 
-    @PutMapping("/topUp")
-    public ResponseEntity<TransactionDto> topUpAccount (@RequestBody TopUpDto topUpDto)
+    @PutMapping("/top-up-wallet-balance")
+    public ResponseEntity<TopUpDto> topUpAccount (@RequestBody TopUpDto topUpDto)
     {
-        return new ResponseEntity<>(userService.topUpWallet(topUpDto), HttpStatus.OK);
+        return new ResponseEntity<>(userService.topUpWalletBalance(topUpDto), HttpStatus.OK);
+    }
+
+    @PutMapping("/withdrawal-from-wallet")
+    public ResponseEntity<Transaction> withdrawal (@RequestBody WithdrawalOrTransferDto withdrawalOrTransferDto)
+    {
+        return new ResponseEntity<>(userService.withdrawal(withdrawalOrTransferDto), HttpStatus.OK);
+    }
+
+    @PutMapping("/change-transaction-pin")
+    public  ResponseEntity<HttpResponse> changeTransactionPin (@RequestBody ChangeTransactionPinDto changeTransactionPinDto)
+    {
+        return response(HttpStatus.CREATED, userService.changeTransactionPin(changeTransactionPinDto));
     }
 
     public static ResponseEntity<HttpResponse> response(HttpStatus httpStatus, String message)

@@ -7,19 +7,21 @@ import com.decadave.ewalletapp.account.AccountRepository;
 import com.decadave.ewalletapp.role.Role;
 import com.decadave.ewalletapp.role.RoleDto;
 import com.decadave.ewalletapp.role.RoleRepository;
+import com.decadave.ewalletapp.shared.dto.ChangeTransactionPinDto;
 import com.decadave.ewalletapp.shared.dto.TopUpDto;
+import com.decadave.ewalletapp.shared.dto.WithdrawalOrTransferDto;
 import com.decadave.ewalletapp.shared.enums.TransactionLevel;
 import com.decadave.ewalletapp.shared.enums.TransactionStatus;
 import com.decadave.ewalletapp.shared.enums.TransactionType;
 import com.decadave.ewalletapp.shared.exceptions.*;
 import com.decadave.ewalletapp.transaction.Transaction;
-import com.decadave.ewalletapp.transaction.TransactionDto;
 import com.decadave.ewalletapp.transaction.TransactionRepository;
 import com.decadave.ewalletapp.wallet.Wallet;
 import com.decadave.ewalletapp.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -41,13 +43,6 @@ public class UserServiceImpl implements UserService
     private final TransactionRepository transactionRepository;
     private  final ModelMapper mapper;
 
-//    @Autowired
-//    public UserServiceImpl(AccountUserRepository userRepository, RoleRepository roleRepository, ModelMapper mapper) {
-//        this.userRepository = userRepository;
-//        this.roleRepository = roleRepository;
-//        this.mapper = mapper;
-//    }
-
     @Override
     public String createAccountUser(AccountUserDto userDto)
     {
@@ -56,7 +51,8 @@ public class UserServiceImpl implements UserService
         if(user.isEmpty())
         {
             AccountUser userToSave = mapper.map(userDto, AccountUser.class);
-            userToSave.setTransactionLevel(TransactionLevel.LEVEL_ONE_ALL);
+//            userToSave.setTransactionLevel(TransactionLevel.LEVEL_ONE_ALL);
+            userToSave.setTransactionLevel(TransactionLevel.LEVEL_TWO_SILVER);
             userRepository.save(userToSave);
             System.out.println(userToSave.getId());
 
@@ -64,7 +60,7 @@ public class UserServiceImpl implements UserService
 
             KYC userKyc = createAKycDirectoryForUser(userAccountCreation);
 
-            createWalletForUser(userAccountCreation, userKyc);
+            createWalletForUser(userAccountCreation, userKyc, userToSave.getEmail());
 
         } else
         {
@@ -73,13 +69,14 @@ public class UserServiceImpl implements UserService
         return "Account user created successfully";
     }
 
-    private void createWalletForUser(Account userAccountCreation, KYC userKyc) {
+    private void createWalletForUser(Account userAccountCreation, KYC userKyc, String userEmail) {
         Wallet userWallet = Wallet.builder()
                 .walletBalance(0.00)
                 .walletAccountNumber(generateRandomAccountNumber())
                 .accountHolderId(userAccountCreation.getAccountHolderId())
                 .transactionPin("0000")
                 .kycId(userKyc.getId())
+                .accountHolderEmail(userEmail)
                 .build();
 
         userAccountCreation.setWallet(userWallet);
@@ -143,6 +140,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
+    @Cacheable("user")
     public AccountUserDto getUser(String userEmail)
     {
         log.info("Fetching a particular user by email, {}", userEmail);
@@ -153,6 +151,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
+    @Cacheable("users")
     public List<AccountUser> AccountUsers()
     {
         log.info("Getting all registered account users");
@@ -160,39 +159,169 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
-    public TransactionDto topUpWallet(TopUpDto topUpDto) {
+    public TopUpDto topUpWalletBalance (TopUpDto topUpDto)
+    {
         log.info("Topping up my wallet account");
-        Wallet walletToTopUp = walletRepository.findByAccountHolderId(topUpDto.getAccountHolderId());
-        TransactionDto transactionDone = new TransactionDto();
-        if(walletToTopUp!= null )
+        Optional<Wallet> walletToTopUp = Optional.ofNullable(walletRepository.findByAccountHolderId(topUpDto.getAccountHolderId())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+        Optional<AccountUser> user = userRepository.findById(walletToTopUp.get().getAccountHolderId());
+
+        TopUpDto transactionDone = new TopUpDto();
+        if(Objects.equals(walletToTopUp.get().getTransactionPin(), "0000"))
         {
-            if(topUpDto.getAmount()>=50)
+            throw new AmountTooSmallOrBiggerException("For your security, you need to change your transaction pin before any transaction.");
+        }
+        if(walletToTopUp.get().getTransactionPin().equals(topUpDto.getTransactionPin()))
+        {
+            TransactionLevel userLevel = user.get().getTransactionLevel();
+            if (userLevel.equals(TransactionLevel.LEVEL_ONE_ALL))
             {
-                if (Objects.equals(topUpDto.getTransactionPin(), walletToTopUp.getTransactionPin()))
+                if(topUpDto.getAmount()>=50 && topUpDto.getAmount()<=50000)
                 {
-                    Double amountToppedUp = walletToTopUp.getWalletBalance()+topUpDto.getAmount();
-                    walletToTopUp.setWalletBalance(amountToppedUp);
-                    walletRepository.save(walletToTopUp);
-
-                    String date = setDateAndTimeForTransaction();
-
-                    Transaction userTransaction = generateTransactionSummary(topUpDto, walletToTopUp, date);
-
-                    transactionDone = mapper.map(userTransaction, TransactionDto.class);
+                    createTransactionSummary(walletToTopUp, topUpDto, transactionDone);
                 } else
                 {
-                    throw new WrongTransactionPin("You have entered a wrong transaction password!");
+                    throw new AmountTooSmallOrBiggerException("Amount to topUp cannot be less than N50 and Not more than 50000 ");
                 }
+            } else if (userLevel.equals(TransactionLevel.LEVEL_TWO_SILVER))
+            {
+                if(topUpDto.getAmount()>=50 && topUpDto.getAmount()<=1000000)
+                {
+                    createTransactionSummary(walletToTopUp, topUpDto, transactionDone);
                 } else
                 {
-                    throw new AmountTooSmallException("Amount to topUp cannot be less than N50");
+                    throw new AmountTooSmallOrBiggerException("Amount to topUp cannot be less than N50 and Not more than 1000000 ");
                 }
+            } else if (userLevel.equals(TransactionLevel.LEVEL_THREE_GOLD))
+            {
+                if(topUpDto.getAmount()>=50 && topUpDto.getAmount()<=1000000000);
+                createTransactionSummary(walletToTopUp, topUpDto, transactionDone);
+            } else
+            {
+                throw new AmountTooSmallOrBiggerException("Amount to topUp cannot be less than N50 and Not more than 1000000000 ");
+            }
+            String date = setDateAndTimeForTransaction();
+            Transaction userTransaction = generateTransactionSummary(topUpDto, walletToTopUp.get(), date);
+            transactionDone = mapper.map(userTransaction, TopUpDto.class);
         } else
         {
-            throw new UsersWalletWithUserIdNotFound("Users wallet not found");
+            throw new WrongTransactionPin("You have entered a wrong transaction pin! ");
         }
+
         return transactionDone;
     }
+
+
+    @Override
+    public Transaction withdrawal(WithdrawalOrTransferDto withdrawalOrTransferDto) {
+        log.info("Withdrawing of currency");
+        Optional<Wallet> sendersWallet = Optional.ofNullable(walletRepository
+                .findByAccountHolderId(withdrawalOrTransferDto.getAccountHolderId())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+
+//        Wallet receiverWallet = walletRepository.findByAccountHolderEmailOrWalletAccountNumber(withdrawalOrTransferDto.getReceiversEmailOrAccountNumber(), withdrawalOrTransferDto.getReceiversEmailOrAccountNumber());
+//                .orElseThrow(() -> new UserWithEmailNotFound("Receivers Wallet was not found")));
+
+        Optional<AccountUser> user = Optional.ofNullable(userRepository.findById(sendersWallet.get().getAccountHolderId())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+
+        Transaction transactionToBeDone = new Transaction();
+        Transaction transactionSummary = new Transaction();
+        Double amountToWithdraw = withdrawalOrTransferDto.getAmount();
+        Double amountHaving = sendersWallet.get().getWalletBalance();
+        if(Objects.equals(withdrawalOrTransferDto.getTransactionPin(), "0000"))
+        {
+            throw new AmountTooSmallOrBiggerException("For your security, you need to change your transaction pin before any transaction.");
+        }
+        if(sendersWallet.get().getTransactionPin().equals(withdrawalOrTransferDto.getTransactionPin()))
+        {
+        if(amountHaving < 999 || amountToWithdraw > amountHaving)
+        {
+            throw new InsufficientFundsException("Amount initiated is below your wallet balance");
+        }
+            TransactionLevel userLevel = user.get().getTransactionLevel();
+            if (userLevel.equals(TransactionLevel.LEVEL_ONE_ALL))
+            {
+                if(withdrawalOrTransferDto.getAmount()>=1000 && withdrawalOrTransferDto.getAmount()<=20000)
+                {
+                    transactionToBeDone = getWithdrawalOrTransferSummary(sendersWallet, transactionSummary, withdrawalOrTransferDto);
+                } else
+                {
+                    throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 20000");
+                }
+            } else if (userLevel.equals(TransactionLevel.LEVEL_TWO_SILVER))
+            {
+                if(withdrawalOrTransferDto.getAmount()>=1000 && withdrawalOrTransferDto.getAmount()<=700000)
+                {
+                    transactionToBeDone = getWithdrawalOrTransferSummary(sendersWallet, transactionSummary, withdrawalOrTransferDto);
+                } else
+                {
+                    throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 700000 ");
+                }
+            } else if (userLevel.equals(TransactionLevel.LEVEL_THREE_GOLD))
+            {
+                if(withdrawalOrTransferDto.getAmount()>=50 && withdrawalOrTransferDto.getAmount()<=20000000)
+                {
+                    transactionToBeDone = getWithdrawalOrTransferSummary(sendersWallet, transactionSummary, withdrawalOrTransferDto);
+                }
+            } else {
+                throw new AmountTooSmallOrBiggerException("Amount to Withdraw cannot be less than N1000 and Not more than 20000000");
+            }
+    } else
+        {
+            throw new WrongTransactionPin("You have entered a wrong transaction pin! ");
+
+        }
+
+
+        return transactionToBeDone;
+    }
+
+    private Transaction getWithdrawalOrTransferSummary (Optional<Wallet> sendersWallet, Transaction transaction, WithdrawalOrTransferDto transactionDone) {
+        deductionMethod(sendersWallet, transactionDone.getAmount());
+        String date = setDateAndTimeForTransaction();
+
+        Transaction userWithdrawalTransaction = Transaction.builder()
+                .transactionAmount(transactionDone.getAmount())
+                .transactionStatus(TransactionStatus.SUCCESSFUL)
+                .transactionType(TransactionType.WITHDRAWALS)
+                .userId(transactionDone.getAccountHolderId())
+                .walletId(sendersWallet.get().getId())
+                .dateAndTimeForTransaction(date)
+                .Summary(transactionDone.getTransactionSummary())
+                .build();
+        transactionRepository.save(userWithdrawalTransaction);
+
+        transactionDone = mapper.map(userWithdrawalTransaction, WithdrawalOrTransferDto.class);
+        return userWithdrawalTransaction;
+    }
+
+
+    private void createTransactionSummary(Optional<Wallet> walletToTopUp, TopUpDto topUpDto, TopUpDto transactionDone)
+    {
+        topUpMethod(walletToTopUp, topUpDto.getAmount());
+        String date = setDateAndTimeForTransaction();
+        Transaction userTransaction = generateTransactionSummary(topUpDto, walletToTopUp.get(), date);
+        transactionDone = mapper.map(userTransaction, TopUpDto.class);
+    }
+
+    @Override
+    public String changeTransactionPin(ChangeTransactionPinDto changeTransactionPinDto)
+    {
+        log.info("Changing my wallet transaction pin");
+        Wallet walletToChangeTransactionPin = (walletRepository.findByAccountHolderId(changeTransactionPinDto.getAccountHolderId())
+                .orElseThrow(() -> new UserWithEmailNotFound("Wallet was not found")));
+        AccountUser user = userRepository.findById(changeTransactionPinDto.getAccountHolderId())
+                .orElseThrow(() ->new UserWithEmailNotFound("Use was not found"));
+
+        walletToChangeTransactionPin.setTransactionPin(changeTransactionPinDto.getNewPin());
+        walletRepository.save(walletToChangeTransactionPin);
+
+        return "Pin changed Successfully";
+    }
+
+
+
 
     private Transaction generateTransactionSummary(TopUpDto topUpDto, Wallet walletToTopUp, String date) {
         Transaction userTransaction = Transaction.builder()
@@ -223,5 +352,19 @@ public class UserServiceImpl implements UserService
             accNum.append(resRandom);
         }
         return accNum.toString();
+    }
+
+    private  void topUpMethod (Optional<Wallet> wallet, Double amount)
+    {
+        Double amountToppedUp = wallet.get().getWalletBalance()+amount;
+                wallet.get().setWalletBalance(amountToppedUp);
+                walletRepository.save(wallet.get());
+    }
+
+    private  void deductionMethod (Optional<Wallet> wallet, Double amount)
+    {
+        Double amountTopDeduct = wallet.get().getWalletBalance()-amount;
+        wallet.get().setWalletBalance(amountTopDeduct);
+        walletRepository.save(wallet.get());
     }
 }

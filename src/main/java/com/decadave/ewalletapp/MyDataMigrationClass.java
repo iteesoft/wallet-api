@@ -7,6 +7,7 @@ import com.decadave.ewalletapp.accountUser.UserService;
 import com.decadave.ewalletapp.role.Role;
 import com.decadave.ewalletapp.role.RoleRepository;
 import com.decadave.ewalletapp.shared.enums.Gender;
+import com.decadave.ewalletapp.shared.enums.TransactionLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,7 @@ public class MyDataMigrationClass
                     .gender(Gender.MALE)
                     .lastName("Baba")
                     .password("12345dsa")
+                    .transactionLevel(TransactionLevel.LEVEL_TWO_SILVER)
                     .build();
 
             AccountUser user2 = AccountUser.builder()
@@ -37,6 +39,7 @@ public class MyDataMigrationClass
                     .gender(Gender.FEMALE)
                     .lastName("Baba2")
                     .password("12345dddsa")
+                    .transactionLevel(TransactionLevel.LEVEL_THREE_GOLD)
                     .build();
             List<AccountUser> users = new ArrayList<>();
             users.add(user);
