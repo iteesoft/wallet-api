@@ -30,4 +30,5 @@ public class AccountUser extends BaseClass
     private TransactionLevel transactionLevel;
     @ManyToMany(fetch = FetchType.EAGER)
     private Collection<Role> roles = new ArrayList<>();
+    private boolean isAccountVerified;
 }

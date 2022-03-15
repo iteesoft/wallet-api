@@ -11,11 +11,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 
 @SpringBootApplication
+@EnableSwagger2
 @EnableCaching
 @OpenAPIDefinition(info = @Info(title = "Wallet API", version = "2.0", description = "Wallet and Account Interaction API Details"))
 public class EWalletAppApplication

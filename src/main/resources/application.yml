@@ -13,6 +13,14 @@ spring:
       ddl-auto: create-drop
     show-sql: true
 
+#  mvc:
+#    pathmatch:
+#      matching-strategy: ant_path_matcher:jwt
+#
+#jwt:
+#  secret: wakaCast247
+
+
 #
 #    http://localhost:8082/api/v1/swagger-ui/index:
 #      html?configUrl=/api/v1/v3/api-docs/swagger-config#/:

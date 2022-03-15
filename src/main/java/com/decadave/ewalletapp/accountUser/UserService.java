@@ -1,6 +1,8 @@
 package com.decadave.ewalletapp.accountUser;
 
 
+import com.decadave.ewalletapp.KYC.KycAdminVerificationDto;
+import com.decadave.ewalletapp.KYC.KycDto;
 import com.decadave.ewalletapp.role.RoleDto;
 import com.decadave.ewalletapp.shared.dto.TransferDto;
 import com.decadave.ewalletapp.shared.dto.TopUpDto;
@@ -24,4 +26,6 @@ public interface UserService
     Transaction withdrawal(WithdrawalDto withdrawalDto);
     TransactionDto transferMoney (TransferDto transferDto);
     String changeTransactionPin (ChangeTransactionPinDto changeTransactionPinDto);
+    String doKycDocumentation (KycDto kycDto);
+    String kycApprovalByAdmin (KycAdminVerificationDto kycAdminVerificationDto);
 }

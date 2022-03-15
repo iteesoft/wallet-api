@@ -1,24 +1,22 @@
 package com.decadave.ewalletapp.KYC;
 
-
 import com.decadave.ewalletapp.shared.BaseClass;
 import lombok.*;
 
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
-@Entity
 @Getter
 @Setter
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "kyc_table")
-public class KYC extends BaseClass {
-    private String bVN;
-    private String driverLicence;
+@Entity
+@Table(name = "kyc_database")
+public class KYCEntity extends BaseClass {
+    private String bvnNumber;
+    private String driverLicenceNumber;
     private String passportUrl;
-    private Long accountHolderId;
-    private String approvedLevel;
+    private String accountHolderEmail;
 }
