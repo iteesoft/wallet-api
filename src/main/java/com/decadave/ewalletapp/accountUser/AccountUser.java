@@ -9,6 +9,7 @@ import lombok.*;
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -29,6 +30,7 @@ public class AccountUser extends BaseClass
     @Enumerated(EnumType.STRING)
     private TransactionLevel transactionLevel;
     @ManyToMany(fetch = FetchType.EAGER)
-    private Collection<Role> roles = new ArrayList<>();
+//    private Collection<Role> roles = new ArrayList<>();
+    private Set<Role> roles;
     private boolean isAccountVerified;
 }

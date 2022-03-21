@@ -22,6 +22,7 @@ import com.decadave.ewalletapp.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -134,7 +135,8 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
-    public void addROleTOUser(AddRoleToUserDto addRoleToUserDto)
+    @CachePut(cacheNames = "add-role")
+    public String addROleTOUser(AddRoleToUserDto addRoleToUserDto)
     {
         log.info("Adding new role to a user");
         AccountUser user = userRepository.findByEmail(addRoleToUserDto.getUserEmail())
@@ -147,12 +149,44 @@ public class UserServiceImpl implements UserService
             throw new RoleNotFoundException("User already has this role");
         }  else
         {
-            user.getRoles().add(role);
+            Set<Role> roles;
+            if(user.getRoles() == null || user.getRoles().isEmpty())
+            {
+                roles = new HashSet<>();
+            } else
+            {
+                roles = user.getRoles();
+            }
+            roles.add(role);
+            user.setRoles(roles);
         }
+
+//        private void setRole(ProfileSetupDto setupDto, User updatedUser) {
+//        for (String roleTitle: setupDto.getRoleTitles()) {
+//            Optional<Role> optionalRole = roleRepository.findRoleByRoleTitle(roleTitle);
+//            Role role;
+//            if (optionalRole.isPresent()) {
+//                role = optionalRole.get();
+//            } else {
+//                role = new Role();
+//                role.setRoleTitle(roleTitle);
+//                roleRepository.save(role);
+//            }
+//            Set<Role> roles;
+//            if (updatedUser.getRoles() == null || updatedUser.getRoles().isEmpty()) {
+//                roles = new HashSet<>();
+//            } else {
+//                roles = updatedUser.getRoles();
+//            }
+//            roles.add(role);
+//            updatedUser.setRoles(roles);
+//        }
+//    }
+        return "Role added successfully";
     }
 
     @Override
-    @Cacheable("user")
+    @Cacheable(cacheNames = "user")
     public AccountUserDto getUser(String userEmail)
     {
         log.info("Fetching a particular user by email, {}", userEmail);
@@ -163,7 +197,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
-    @Cacheable("users")
+    @Cacheable(cacheNames = "users")
     public List<AccountUser> AccountUsers()
     {
         log.info("Getting all registered account users");
@@ -171,6 +205,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
+    @CachePut(cacheNames = "wallet-topup", key = "#waletId")
     public TopUpDto topUpWalletBalance (TopUpDto topUpDto)
     {
     UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication()
@@ -230,6 +265,7 @@ public class UserServiceImpl implements UserService
 
 
     @Override
+    @CachePut(cacheNames = "withdrawal")
     public Transaction withdrawal(WithdrawalDto withdrawalDto)
     {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication()
@@ -293,6 +329,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
+    @CachePut(cacheNames = "transfer-money")
     public TransactionDto transferMoney(TransferDto transferDto)
     {
         log.info("Transfer of currency");

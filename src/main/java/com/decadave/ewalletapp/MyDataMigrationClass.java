@@ -40,11 +40,11 @@ public class MyDataMigrationClass
             roles.add(role2);
             roleRepository.saveAll(roles);
 
-//            Collection<Role > userRole = new ArrayList<Role>();
-//            Collection<Role > adminRole = new ArrayList<Role>();
-//            userRole.add(new Role("USER"));
-//            adminRole.add(new Role("ADMIN"));
 
+                    Set<Role> adminROle = new HashSet<>();
+                    Set<Role> userRole = new HashSet<>();
+                    adminROle.add(role2);
+                    userRole.add(role1);
             AccountUser user = AccountUser.builder()
                     .email("davidbaba@gmail.com")
                     .firstName("David")
@@ -53,7 +53,7 @@ public class MyDataMigrationClass
                     .password(passwordEncoder.encode("12345dsa"))
                     .transactionLevel(TransactionLevel.LEVEL_TWO_SILVER)
                     .isAccountVerified(true)
-//                    .roles(userRole)
+                    .roles(adminROle)
                     .build();
 
             AccountUser user2 = AccountUser.builder()
@@ -64,8 +64,7 @@ public class MyDataMigrationClass
                     .password(passwordEncoder.encode("12345dddsa"))
                     .transactionLevel(TransactionLevel.LEVEL_THREE_GOLD)
                     .isAccountVerified(true)
-
-//                    .roles(adminRole)
+                    .roles(userRole)
                     .build();
             List<AccountUser> users = new ArrayList<>();
             users.add(user);

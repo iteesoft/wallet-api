@@ -19,7 +19,7 @@ public interface UserService
 {
     String createAccountUser(AccountUserDto userDto);
     String saveRole (RoleDto roleDto);
-    void addROleTOUser(AddRoleToUserDto addRoleToUserDto);
+    String addROleTOUser(AddRoleToUserDto addRoleToUserDto);
     AccountUserDto getUser(String userId);
     List<AccountUser> AccountUsers();
     TopUpDto topUpWalletBalance(TopUpDto topUpDto);

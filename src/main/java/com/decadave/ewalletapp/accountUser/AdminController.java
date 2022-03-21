@@ -41,6 +41,12 @@ public class AdminController
         return response(HttpStatus.OK, userService.saveRole(roleDto));
     }
 
+    @PostMapping("/add-role-to-users")
+    public ResponseEntity<HttpResponse> saveRoleToUser (@RequestBody AddRoleToUserDto addRoleToUserDto)
+    {
+        return response(HttpStatus.OK, userService.addROleTOUser(addRoleToUserDto));
+    }
+
     @PostMapping("/admin-validates-upgrades")
     public ResponseEntity<HttpResponse> upgradeUsersLevel (@RequestBody KycAdminVerificationDto kycAdminVerificationDto)
     {
